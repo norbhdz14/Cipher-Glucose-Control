@@ -1,0 +1,105 @@
+--- a/main.py	2026-11-03 02:58:36.997389000 +0000
++++ b/main.py	2026-11-03 03:02:34.978610684 +0000
+@@ -1159,6 +1159,21 @@
+         nombre = "glucosa_%s_%s.%s" % (
+             seguro, datetime.now().strftime("%Y%m%d_%H%M%S"), ext)
+         ultimo_error = None
++        if platform == "android" and carpeta_respaldo and os.path.isdir(carpeta_respaldo):
++            # Android 10+: se escribe en la carpeta privada y se copia a Descargas con MediaStore
++            tmp = os.path.join(carpeta_respaldo, nombre)
++            try:
++                escritor(tmp)
++                destino = guardar_en_descargas(tmp, nombre, MIME_EXPORT.get(ext, "application/octet-stream"))
++                if destino:
++                    try:
++                        os.remove(tmp)
++                    except OSError:
++                        pass
++                    return destino
++                return tmp
++            except OSError as exc:
++                ultimo_error = exc
+         for carpeta in self._candidatos_exportacion(carpeta_respaldo):
+             if not carpeta or not os.path.isdir(carpeta):
+                 continue
+@@ -1242,7 +1257,7 @@
+ from kivy.uix.filechooser import FileChooserListView
+ from kivy.uix.image import Image
+ from kivy.uix.behaviors import ButtonBehavior
+-from kivy.utils import escape_markup
++from kivy.utils import escape_markup, platform
+ try:
+     from kivy.core.text.markup import MarkupLabel as CoreMarkup
+ except Exception:
+@@ -1691,6 +1706,61 @@
+     return re.sub(r"\[/?[^\]]*\]", "", texto)
+ 
+ 
++# ----------------------------------------------------------------------
++# Android: permiso de notificaciones y guardado en Descargas (MediaStore).
++# En Android 10+ ya no se puede escribir con rutas directas en /Download.
++# ----------------------------------------------------------------------
++
++MIME_EXPORT = {"csv": "text/csv", "txt": "text/plain", "json": "application/json"}
++
++
++def pedir_permisos_android():
++    """Pide en pantalla el permiso de notificaciones (Android 13+). No hace nada fuera de Android."""
++    if platform != "android":
++        return
++    try:
++        from android.permissions import request_permissions
++        request_permissions(["android.permission.POST_NOTIFICATIONS"])
++    except Exception:
++        traceback.print_exc()
++
++
++def guardar_en_descargas(ruta_origen, nombre, mime):
++    """Copia el archivo a la carpeta Descargas con MediaStore (Android 10+).
++    Devuelve la ruta que verá el usuario, o None si no se pudo (se usa la carpeta privada)."""
++    if platform != "android":
++        return None
++    entrada = flujo = None
++    try:
++        from jnius import autoclass
++        if autoclass("android.os.Build$VERSION").SDK_INT < 29:
++            return None
++        activo = autoclass("org.kivy.android.PythonActivity").mActivity
++        resolver = activo.getContentResolver()
++        columnas = autoclass("android.provider.MediaStore$MediaColumns")
++        valores = autoclass("android.content.ContentValues")()
++        valores.put(columnas.DISPLAY_NAME, nombre)
++        valores.put(columnas.MIME_TYPE, mime)
++        valores.put(columnas.RELATIVE_PATH, autoclass("android.os.Environment").DIRECTORY_DOWNLOADS)
++        uri = resolver.insert(autoclass("android.provider.MediaStore$Downloads").EXTERNAL_CONTENT_URI, valores)
++        if uri is None:
++            return None
++        flujo = resolver.openOutputStream(uri)
++        entrada = autoclass("java.io.FileInputStream")(ruta_origen)
++        autoclass("android.os.FileUtils").copy(entrada, flujo)
++        return "Download/" + nombre
++    except Exception:
++        traceback.print_exc()
++        return None
++    finally:
++        for f in (entrada, flujo):
++            try:
++                if f is not None:
++                    f.close()
++            except Exception:
++                pass
++
++
+ def enviar_notificacion(titulo, mensaje):
+     """Intenta una notificación real del sistema con plyer. True si se envió;
+     False si plyer no está instalado o el sistema la rechaza (se usa el aviso en pantalla)."""
+@@ -3931,6 +4001,9 @@
+         if self.root:
+             self.root.actualizar_estilos()
+ 
++    def on_start(self):
++        Clock.schedule_once(lambda *_: pedir_permisos_android(), 1.5)
++
+     def build(self):
+         Window.softinput_mode = "below_target"
+ 

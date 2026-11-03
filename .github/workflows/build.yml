@@ -1,0 +1,36 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container:
+      image: kivy/buildozer:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify required files
+        run: |
+          for f in main.py icon.png presplash.png cipher.png icon_es.jpg icon_eng.jpg "fonts/fontawesome-regular-1_ufonts.com.ttf"; do
+            test -f "$f" || { echo "Falta el archivo: $f"; exit 1; }
+          done
+
+      - name: Clean up workspace and old cache
+        run: |
+          rm -rf .buildozer bin/ .plat ~/.buildozer
+
+      - name: Build with Buildozer
+        run: |
+          export MAKEFLAGS="-j2"
+          yes | buildozer -v android debug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CipherGlucoseControl-APK
+          path: bin/*.apk

@@ -41,3 +41,17 @@ Si *Cipher Glucose Control* te resulta útil y deseas apoyar el desarrollo conti
 ## 📄 Licencia
 
 Este proyecto está distribuido bajo los términos de la **Licencia GNU General Public License v3.0 (GPLv3)**. Consulta el archivo `LICENSE` para más detalles.
+
+## About / English
+
+**Cipher Glucose Control** is an open-source mobile application designed for personal health tracking, focusing on blood glucose, weight, test strip inventory, and BMI management. Developed in Python and Kivy, it runs completely offline to protect your privacy.
+
+### Key Features:
+* **Glucose Tracking:** Log blood glucose levels (mg/dL) with specific moments (fasting, pre-meal, post-meal, etc.) and custom notes.
+* **Test Strip Inventory:** Real-time stock counter with color-coded warnings for low inventory.
+* **Weight & BMI Support:** Calculate BMI using adult standards or WHO 2007 growth references for ages 5–19.
+* **Multi-profile Support:** Manage different user profiles on a single device.
+* **Export & Backup:** Export your data to CSV, TXT, or JSON formats, and share summaries directly via WhatsApp.
+* **Privacy First:** All data is stored locally on your device; no cloud tracking or external servers.
+
+*Disclaimer: This app is a personal logging tool created by a computer systems engineer, not a medical device. It does not provide medical diagnoses or replace professional medical care. Always use under medical supervision.*

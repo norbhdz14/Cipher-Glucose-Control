@@ -1,0 +1,28 @@
+License: GPL-3.0-onlyWebSite: https://github.com/norbhdz14/CipherGlucoseControl
+SourceCode: https://github.com/norbhdz14/CipherGlucoseControl
+IssueTracker: https://github.com/norbhdz14/CipherGlucoseControl/issues
+
+Summary: Aplicación móvil para el control integral de glucosa, peso e IMC.
+Description: |-
+  Cipher Glucose Control es una herramienta móvil de código abierto orientada 
+  al registro y control personal de la salud. Permite llevar un seguimiento 
+  detallado de los niveles de glucosa en sangre, inventario de tiras reactivas, 
+  control de peso e índice de masa corporal (IMC) con soporte multiusuario, 
+  gráficas de tendencia, temas claro/oscuro y exportación de datos (CSV/JSON/TXT).
+
+  Aviso importante: Es una herramienta de registro personal desarrollada por 
+  un ingeniero en sistemas; no constituye un dispositivo médico ni sustituye 
+  la supervisión médica profesional.
+
+# Configuración de compilación para Buildozer / Python
+Builds:
+  - versionName: '4.3'
+  - versionCode: 43
+    commit: v4.3
+    subdir: .
+    cmd: buildozer -v android debug
+    # F-Droid necesita saber dónde queda el APK generado para extraerlo
+    output: bin/cipherglucosecontrol-4.3.0-arm64-v8a-debug.apk
+
+MaintainerNotes: |-
+  Requiere Python, Kivy y las dependencias descritas en el buildozer.spec.

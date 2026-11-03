@@ -935,6 +935,16 @@ class GestorGlucosa:
         self.guardar()
         return perfil
 
+    def renombrar_perfil(self, perfil, nombre):
+        nombre = (nombre or "").strip()
+        if not nombre:
+            raise ErrorUsuario("Escribe un nombre para el perfil. / Enter a profile name.")
+        if any(p.id != perfil.id and p.nombre.lower() == nombre.lower() for p in self.perfiles.values()):
+            raise ErrorUsuario("Ya existe un perfil con ese nombre. / Profile already exists.")
+        perfil.nombre = nombre
+        self.guardar()
+        return perfil
+
     def cambiar_por_nombre(self, nombre):
         for p in self.perfiles.values():
             if p.nombre == nombre:
@@ -1417,6 +1427,7 @@ TEXTOS = {
         "ok": "Aceptar",
         "new_profile_title": "Añadir nuevo perfil",
         "profile_name_hint": "Nombre del usuario",
+        "welcome_name_prompt": "¡Bienvenido! ¿Cómo te llamas? Este nombre identificará tu perfil y tus registros.",
         "strip_inv_title": "Añadir tiras",
         "strip_inv_prompt": "Tiras actuales: %d\n¿Cuántas quieres añadir?",
         "strip_add_hint": "Cantidad",
@@ -1566,6 +1577,7 @@ TEXTOS = {
         "ok": "OK",
         "new_profile_title": "Add new profile",
         "profile_name_hint": "User name",
+        "welcome_name_prompt": "Welcome! What is your name? It will identify your profile and your records.",
         "strip_inv_title": "Add strips",
         "strip_inv_prompt": "Current strips: %d\nHow many do you want to add?",
         "strip_add_hint": "Amount",
@@ -1675,7 +1687,7 @@ TEXTOS = {
     }
 }
 
-APP_VERSION = "4.3"
+APP_VERSION = "1.0.0"
 AVISO_VERSION = "1"   # súbela si cambias el aviso legal: se vuelve a pedir la aceptación
 AVISO_EXPORT = ("AVISO: registro personal generado por una app creada por un ingeniero en sistemas "
                 "(no por un médico). No es un diagnóstico ni sustituye la valoración médica. "
@@ -3487,8 +3499,48 @@ class PantallaPrincipal(BoxLayout):
 
     def _pedir_datos_cuerpo(self, *_):
         perfil = self.gestor.activo
-        if not perfil.tiene_datos_cuerpo:
+        if perfil.tiene_datos_cuerpo:
+            return
+        if perfil.nombre == "Principal":
+            # primer uso: primero el nombre, después los datos del cuerpo
+            self._popup_nombre_inicial(perfil)
+        else:
             self._popup_cuerpo(perfil)
+
+    def _popup_nombre_inicial(self, perfil):
+        lang = self.app.idioma_actual
+        fs = self.app.factor_escala_global
+        colores = TEMAS[self.app.tema_actual]
+        caja = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(10))
+        caja.add_widget(lbl(ico("usuario") + t("welcome_name_prompt", lang), font_size=sp(13) * fs,
+                            color=colores["TEXTO_SUAVE"], size_hint_y=None, height=dp(64), ajuste="multi"))
+        entrada = campo(hint_text=t("profile_name_hint", lang), font_size=sp(16) * fs, height=dp(50))
+        caja.add_widget(entrada)
+        caja.add_widget(Widget())
+        botones = BoxLayout(size_hint_y=None, height=dp(46), spacing=dp(8))
+        b_later = boton(t("later", lang), GRIS, factor_escala=fs)
+        b_ok = boton(ico("check") + t("save", lang), CIAN, factor_escala=fs)
+        botones.add_widget(b_later)
+        botones.add_widget(b_ok)
+        caja.add_widget(botones)
+        pop = popup_tema(title=t("new_profile_title", lang), content=caja, size_hint=(0.9, 0.46),
+                         auto_dismiss=False, separator_color=VIOLETA)
+
+        def siguiente():
+            pop.dismiss()
+            self.refrescar()
+            Clock.schedule_once(lambda *_: self._popup_cuerpo(self.gestor.activo), 0.3)
+
+        @blindado
+        def guardar(*_):
+            self.gestor.renombrar_perfil(perfil, entrada.text)
+            siguiente()
+
+        b_ok.bind(on_release=guardar)
+        entrada.bind(on_text_validate=guardar)
+        b_later.bind(on_release=lambda *_: siguiente())
+        pop.open()
+        Clock.schedule_once(lambda dt: setattr(entrada, "focus", True), 0.2)
 
     def _popup_cuerpo(self, perfil=None):
         perfil = perfil or self.gestor.activo
